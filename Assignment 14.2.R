@@ -1,7 +1,8 @@
 
 #--------------------Assignment 14 ---------------
 
-library(dplyr); library(corrplot);library(car); library(MASS)
+library(dplyr); library(corrplot);library(car); library(MASS); library(ggplot2)
+library(reshape2); library(forecast)
 # Q1- read the dataset and identify the right features
 
 # import train data set
@@ -70,6 +71,17 @@ corr  # good corelations with target variable
 corrplot.mixed(cor(train[,c(30:34)]))
 # Total comments are strongly correlated to correlated with cc4(comments in first 24 hrs of publish time) and
 # cc3(comments in last 48 to last 24 hours relative to base date/time) 
+
+df <- train
+melt_df <- melt(df)
+
+# Distribution of all the Variables - Histogram
+ggplot(melt_df, aes(x=value, fill = variable))+
+  geom_histogram(bins=10, color = "Blue")+
+  facet_wrap(~variable, scales = 'free_x')
+df <- log(train[1:39])
+
+
 par(mfrow=c(1,1))
 # c. Visualize the dataset and make inferences from that
 barplot(table(train$target, train$pubday), col = heat.colors(7),
@@ -136,7 +148,8 @@ summary(final_model)
 
 
 prediction <- predict(final_model, test)
-predicted <- data.frame(cbind(actuals = test$target, prediction = abs(prediction)))
+predicted <- data.frame(cbind(actuals = test$target, prediction = prediction))
+predicted$prediction <- ifelse(prediction<0, 0, round(prediction,0))
 cor(predicted)
 View(predicted)
 
@@ -149,16 +162,23 @@ View(predicted)
 # Q8- report the test accuracy vs. the training accuracy
 
 # test accuracy
+round(accuracy(predicted$prediction,predicted$actuals),3)
+
+prediction <- predict(final_model, test)
+predicted <- data.frame(cbind(actuals = test$target, prediction = prediction))
+predicted$prediction <- ifelse(prediction<0, 0, round(prediction,0))
+
 min_max_accuracy <- mean(apply(predicted, 1, min) / apply(predicted, 1, max)) 
 min_max_accuracy 
 
 # training accuracy
-prediction <- predict(final_model, train)
-predicted <- data.frame(cbind(actuals = train$target, prediction = abs(prediction)))
+round(accuracy(predicted$prediction,predicted$actuals),3)
 
+prediction <- predict(final_model, train)
+predicted <- data.frame(cbind(actuals = train$target, prediction = prediction))
+predicted$prediction <- ifelse(prediction<0, 0, round(prediction, 0))
 min_max_accuracy <- mean(apply(predicted, 1, min) / apply(predicted, 1, max)) 
 min_max_accuracy 
-
 
 # Q9- interpret the final model coefficients
 summary(final_model)
@@ -175,8 +195,14 @@ coef(final_model) # coefficients of the model
 # 3.880629e-01
 
 # Q10- plot the model result and compare it with assumptions of the model
-
+par(mfrow=c(2,2))
 plot(final_model)
 
+# Model does not pass the test of normality 
+# the data is heteroscadatic
+# Observations 3528,30608,16432 may have the leverage or potential for influencing the model
+
 ##################################################################
+
+
 
